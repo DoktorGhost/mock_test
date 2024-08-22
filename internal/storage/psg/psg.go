@@ -54,7 +54,7 @@ func InitStorage(conf *config.Config) (*PostgresStorage, error) {
 
 func (s *PostgresStorage) Save(info *entity.WeatherInfo) error {
 	var id int
-	query := `INSERT INTO mock_API (city, temp, condition) VALUES ($1, $2, $3) RETURNING id`
+	query := `INSERT INTO weather (city, temp, condition) VALUES ($1, $2, $3) RETURNING id`
 	err := s.db.QueryRow(query, info.City, info.Temp, info.Condition).Scan(&id)
 	if err != nil {
 		return fmt.Errorf("Error save mock_API: %v", err)
@@ -65,7 +65,7 @@ func (s *PostgresStorage) Save(info *entity.WeatherInfo) error {
 
 func (s *PostgresStorage) Read(id int) (*entity.WeatherInfo, error) {
 	var info entity.WeatherInfo
-	query := `SELECT city, temp, condition FROM mock_API WHERE id=$1`
+	query := `SELECT city, temp, condition FROM weather WHERE id=$1`
 	err := s.db.QueryRow(query, id).Scan(&info.City, &info.Temp, &info.Condition)
 	if err != nil {
 		return nil, err
@@ -74,13 +74,13 @@ func (s *PostgresStorage) Read(id int) (*entity.WeatherInfo, error) {
 }
 
 func (s *PostgresStorage) Update(id int, info *entity.WeatherInfo) error {
-	query := `UPDATE mock_API SET city=$1, temp=$2, condition=$3 WHERE id=$4`
+	query := `UPDATE weather SET city=$1, temp=$2, condition=$3 WHERE id=$4`
 	_, err := s.db.Exec(query, info.City, info.Temp, info.Condition, id)
 	return err
 }
 
 func (s *PostgresStorage) Delete(id int) error {
-	query := `DELETE FROM mock_API WHERE id=$1`
+	query := `DELETE FROM weather WHERE id=$1`
 	_, err := s.db.Exec(query, id)
 	return err
 }

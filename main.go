@@ -33,7 +33,7 @@ func main() {
 
 	coordinate := usecase.NewUseCase(cityAPI.Location{}, weatherAPI.Weather{}, db)
 
-	citys := []string{"Rostov-on-Don", "Moscow", "Bergen", "Amsterdam"}
+	citys := []string{"Rostov-on-Don", "Moscow", "Bergen", "Amsterdam", ""}
 	for _, city := range citys {
 		err = coordinate.GetAndSave(city)
 		if err != nil {
