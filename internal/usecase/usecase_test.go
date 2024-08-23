@@ -4,21 +4,20 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"testTask2/internal/entity"
-	"testTask2/internal/usecase"
-	"testTask2/internal/usecase/mock/mock_API"
-	"testTask2/internal/usecase/mock/mock_storage"
+	"go.uber.org/mock/gomock"
+
+	"github.com/DoktorGhost/mock_test/internal/entity"
+	"github.com/DoktorGhost/mock_test/internal/usecase"
 )
 
 func TestUseCase_GetAndSave(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	defer t.Cleanup(ctrl.Finish)
 
 	// Создаем моки
-	mockCityAPI := mock_API.NewMockCityAPI(ctrl)
-	mockWeatherAPI := mock_API.NewMockWeatherAPI(ctrl)
+	mockCityAPI := usecase.NewMockCityAPI(ctrl)
+	mockWeatherAPI := usecase.NewMockWeatherAPI(ctrl)
 	mockStorage := mock_storage.NewMockDatabase(ctrl)
 
 	// Создаем экземпляр useCase
