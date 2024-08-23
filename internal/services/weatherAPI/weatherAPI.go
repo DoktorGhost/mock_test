@@ -8,19 +8,24 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"testTask2/internal/entity"
+
+	"github.com/DoktorGhost/mock_test/internal/entity"
 )
 
-type Weather struct{}
+type WeatherAPI struct{}
 
-func (w Weather) FetchWeather(loc entity.Location) (entity.WeatherInfo, error) {
+func New() WeatherAPI {
+	return WeatherAPI{}
+}
+
+func (w WeatherAPI) FetchWeather(loc entity.Location) (entity.WeatherInfo, error) {
 
 	accessKey := os.Getenv("ACCESS_KEY")
 
 	// Заголовки запроса
 	headers := map[string]string{
-		"Content-Type":         "application/json",
-		"X-Yandex-Weather-Key": accessKey,
+		"Content-Type":            "application/json",
+		"X-Yandex-WeatherAPI-Key": accessKey,
 	}
 
 	// GraphQL-запрос

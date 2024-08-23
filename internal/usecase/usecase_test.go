@@ -4,25 +4,28 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"testTask2/internal/entity"
-	"testTask2/internal/usecase"
-	"testTask2/internal/usecase/mock/mock_API"
-	"testTask2/internal/usecase/mock/mock_storage"
+	"go.uber.org/mock/gomock"
+
+	"github.com/DoktorGhost/mock_test/internal/entity"
+	"github.com/DoktorGhost/mock_test/internal/services/crud"
+	"github.com/DoktorGhost/mock_test/internal/usecase"
 )
 
 func TestUseCase_GetAndSave(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	defer t.Cleanup(ctrl.Finish)
 
 	// Создаем моки
-	mockCityAPI := mock_API.NewMockCityAPI(ctrl)
-	mockWeatherAPI := mock_API.NewMockWeatherAPI(ctrl)
-	mockStorage := mock_storage.NewMockDatabase(ctrl)
+	mockCityAPI := usecase.NewMockCityAPI(ctrl)
+	mockWeatherAPI := usecase.NewMockWeatherAPI(ctrl)
+	mockStorage := crud.NewMockRepository(ctrl)
+
+	// Создаем экземпляр crud.Service с мокированным репозиторием
+	crudService := crud.NewService(mockStorage)
 
 	// Создаем экземпляр useCase
-	uc := usecase.NewUseCase(mockCityAPI, mockWeatherAPI, mockStorage)
+	uc := usecase.NewUseCase(mockCityAPI, mockWeatherAPI, crudService)
 
 	// 1. Успешный сценарий
 	t.Run("success", func(t *testing.T) {
@@ -31,7 +34,8 @@ func TestUseCase_GetAndSave(t *testing.T) {
 		weatherInfo := entity.WeatherInfo{City: city, Temp: 18.5, Condition: "Cloudy"}
 
 		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetСoordinates(city).Return(location, nil)
+
+		mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
 		mockWeatherAPI.EXPECT().FetchWeather(location).Return(weatherInfo, nil)
 		mockStorage.EXPECT().Save(&weatherInfo).Return(nil)
 
@@ -46,7 +50,7 @@ func TestUseCase_GetAndSave(t *testing.T) {
 		expectedErr := errors.New("could not find city")
 
 		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetСoordinates(city).Return(entity.Location{}, expectedErr)
+		mockCityAPI.EXPECT().GetCoordinates(city).Return(entity.Location{}, expectedErr)
 
 		// Выполнение теста
 		err := uc.GetAndSave(city)
@@ -60,7 +64,7 @@ func TestUseCase_GetAndSave(t *testing.T) {
 		expectedErr := errors.New("failed to fetch weather")
 
 		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetСoordinates(city).Return(location, nil)
+		mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
 		mockWeatherAPI.EXPECT().FetchWeather(location).Return(entity.WeatherInfo{}, expectedErr)
 
 		// Выполнение теста
@@ -76,7 +80,7 @@ func TestUseCase_GetAndSave(t *testing.T) {
 		expectedErr := errors.New("failed to save data")
 
 		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetСoordinates(city).Return(location, nil)
+		mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
 		mockWeatherAPI.EXPECT().FetchWeather(location).Return(weatherInfo, nil)
 		mockStorage.EXPECT().Save(&weatherInfo).Return(expectedErr)
 
