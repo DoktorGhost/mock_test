@@ -8,7 +8,7 @@ import (
 
 	"github.com/DoktorGhost/mock_test/internal/config"
 	"github.com/DoktorGhost/mock_test/internal/repositories"
-	"github.com/DoktorGhost/mock_test/internal/services/cityAPI"
+	"github.com/DoktorGhost/mock_test/internal/services/citiAPI"
 	"github.com/DoktorGhost/mock_test/internal/services/crud"
 	"github.com/DoktorGhost/mock_test/internal/services/weatherAPI"
 	"github.com/DoktorGhost/mock_test/internal/usecase"

@@ -9,11 +9,11 @@ import (
 )
 
 type PostgresStorage struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
 func NewPostgresStorage(db *sql.DB) *PostgresStorage {
-	return &PostgresStorage{db: db}
+	return &PostgresStorage{DB: db}
 }
 
 func InitStorage(conf *config.Config) (*PostgresStorage, error) {

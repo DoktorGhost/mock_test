@@ -1,91 +1,92 @@
 package usecase_test
 
 import (
+	"database/sql"
 	"errors"
+	"github.com/stretchr/testify/suite"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.uber.org/mock/gomock"
 
 	"github.com/DoktorGhost/mock_test/internal/entity"
 	"github.com/DoktorGhost/mock_test/internal/services/crud"
 	"github.com/DoktorGhost/mock_test/internal/usecase"
+	"github.com/testcontainers/testcontainers-go"
 )
 
-func TestUseCase_GetAndSave(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer t.Cleanup(ctrl.Finish)
+type CrudServiceTestSuite struct {
+	suite.Suite
 
-	// Создаем моки
-	mockCityAPI := usecase.NewMockCityAPI(ctrl)
-	mockWeatherAPI := usecase.NewMockWeatherAPI(ctrl)
-	mockStorage := crud.NewMockRepository(ctrl)
+	ctrl              *gomock.Controller
+	db                *sql.DB
+	postgresContainer testcontainers.Container
+	mockCityAPI       *usecase.MockCityAPI
+	mockWeatherAPI    *usecase.MockWeatherAPI
+	mockStorage       *crud.MockRepository
+	crudService       *crud.Service
+	useCase           *usecase.UseCase
+}
 
-	// Создаем экземпляр crud.Service с мокированным репозиторием
-	crudService := crud.NewService(mockStorage)
+func (suite *CrudServiceTestSuite) SetupTest() {
+	suite.ctrl = gomock.NewController(suite.T())
 
-	// Создаем экземпляр useCase
-	uc := usecase.NewUseCase(mockCityAPI, mockWeatherAPI, crudService)
+	suite.mockCityAPI = usecase.NewMockCityAPI(suite.ctrl)
+	suite.mockWeatherAPI = usecase.NewMockWeatherAPI(suite.ctrl)
+	suite.mockStorage = crud.NewMockRepository(suite.ctrl)
+	suite.crudService = crud.NewService(suite.mockStorage)
+	suite.useCase = usecase.NewUseCase(suite.mockCityAPI, suite.mockWeatherAPI, suite.crudService)
+}
 
-	// 1. Успешный сценарий
-	t.Run("success", func(t *testing.T) {
-		city := "Rostov-on-Don"
-		location := entity.Location{City: city, Lat: "47.235", Lon: "39.700"}
-		weatherInfo := entity.WeatherInfo{City: city, Temp: 18.5, Condition: "Cloudy"}
+func (suite *CrudServiceTestSuite) TestGetAndSave_Success() {
+	city := "Rostov-on-Don"
+	location := entity.Location{City: city, Lat: "47.235", Lon: "39.700"}
+	weatherInfo := entity.WeatherInfo{City: city, Temp: 18.5, Condition: "Cloudy"}
 
-		// Настройка поведения моков
+	suite.mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
+	suite.mockWeatherAPI.EXPECT().FetchWeather(location).Return(weatherInfo, nil)
+	suite.mockStorage.EXPECT().Save(&weatherInfo).Return(nil)
 
-		mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
-		mockWeatherAPI.EXPECT().FetchWeather(location).Return(weatherInfo, nil)
-		mockStorage.EXPECT().Save(&weatherInfo).Return(nil)
+	err := suite.useCase.GetAndSave(city)
+	suite.NoError(err)
+}
 
-		// Выполнение теста
-		err := uc.GetAndSave(city)
-		assert.NoError(t, err)
-	})
+func (suite *CrudServiceTestSuite) TestGetAndSave_ErrorGettingCoordinates() {
+	city := "InvalidCity"
+	expectedErr := errors.New("could not find city")
 
-	// 2. Ошибка при получении координат города
-	t.Run("error getting coordinates", func(t *testing.T) {
-		city := "InvalidCity"
-		expectedErr := errors.New("could not find city")
+	suite.mockCityAPI.EXPECT().GetCoordinates(city).Return(entity.Location{}, expectedErr)
 
-		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetCoordinates(city).Return(entity.Location{}, expectedErr)
+	err := suite.useCase.GetAndSave(city)
+	suite.Equal(expectedErr, err)
+}
 
-		// Выполнение теста
-		err := uc.GetAndSave(city)
-		assert.Equal(t, expectedErr, err)
-	})
+func (suite *CrudServiceTestSuite) TestGetAndSave_ErrorFetchingWeather() {
+	city := "Rostov-on-Don"
+	location := entity.Location{City: city, Lat: "47.235", Lon: "39.700"}
+	expectedErr := errors.New("failed to fetch weather")
 
-	// 3. Ошибка при получении данных о погоде
-	t.Run("error fetching weather", func(t *testing.T) {
-		city := "Rostov-on-Don"
-		location := entity.Location{City: city, Lat: "47.235", Lon: "39.700"}
-		expectedErr := errors.New("failed to fetch weather")
+	suite.mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
+	suite.mockWeatherAPI.EXPECT().FetchWeather(location).Return(entity.WeatherInfo{}, expectedErr)
 
-		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
-		mockWeatherAPI.EXPECT().FetchWeather(location).Return(entity.WeatherInfo{}, expectedErr)
+	err := suite.useCase.GetAndSave(city)
+	suite.Equal(expectedErr, err)
+}
 
-		// Выполнение теста
-		err := uc.GetAndSave(city)
-		assert.Equal(t, expectedErr, err)
-	})
+func (suite *CrudServiceTestSuite) TestGetAndSave_ErrorSavingData() {
+	city := "Rostov-on-Don"
+	location := entity.Location{City: city, Lat: "47.235", Lon: "39.700"}
+	weatherInfo := entity.WeatherInfo{City: city, Temp: 18.5, Condition: "Cloudy"}
+	expectedErr := errors.New("failed to save data")
 
-	// 4. Ошибка при сохранении данных
-	t.Run("error saving data", func(t *testing.T) {
-		city := "Rostov-on-Don"
-		location := entity.Location{City: city, Lat: "47.235", Lon: "39.700"}
-		weatherInfo := entity.WeatherInfo{City: city, Temp: 18.5, Condition: "Cloudy"}
-		expectedErr := errors.New("failed to save data")
+	suite.mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
+	suite.mockWeatherAPI.EXPECT().FetchWeather(location).Return(weatherInfo, nil)
+	suite.mockStorage.EXPECT().Save(&weatherInfo).Return(expectedErr)
 
-		// Настройка поведения моков
-		mockCityAPI.EXPECT().GetCoordinates(city).Return(location, nil)
-		mockWeatherAPI.EXPECT().FetchWeather(location).Return(weatherInfo, nil)
-		mockStorage.EXPECT().Save(&weatherInfo).Return(expectedErr)
+	err := suite.useCase.GetAndSave(city)
+	suite.Equal(expectedErr, err)
+}
 
-		// Выполнение теста
-		err := uc.GetAndSave(city)
-		assert.Equal(t, expectedErr, err)
-	})
+func TestCrudServiceTestSuite(t *testing.T) {
+	suite.Run(t, new(CrudServiceTestSuite))
 }
