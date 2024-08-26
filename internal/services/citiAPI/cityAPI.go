@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"testTask2/internal/entity"
+
+	"github.com/DoktorGhost/mock_test/internal/entity"
 )
 
 type Location struct{}
 
-func (l Location) GetСoordinates(city string) (entity.Location, error) {
+func New() Location {
+	return Location{}
+}
+
+func (l Location) GetCoordinates(city string) (entity.Location, error) {
 
 	apiURL := "https://nominatim.openstreetmap.org/search"
 

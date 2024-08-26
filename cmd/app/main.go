@@ -2,13 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
-	"testTask2/internal/API/cityAPI"
-	"testTask2/internal/API/weatherAPI"
-	"testTask2/internal/config"
-	"testTask2/internal/storage/psg"
-	"testTask2/internal/usecase"
+
+	"github.com/joho/godotenv"
+
+	"github.com/DoktorGhost/mock_test/internal/config"
+	"github.com/DoktorGhost/mock_test/internal/repositories"
+	"github.com/DoktorGhost/mock_test/internal/services/citiAPI"
+	"github.com/DoktorGhost/mock_test/internal/services/crud"
+	"github.com/DoktorGhost/mock_test/internal/services/weatherAPI"
+	"github.com/DoktorGhost/mock_test/internal/usecase"
+	"github.com/DoktorGhost/mock_test/pkg/storage/psg"
 )
 
 func main() {
@@ -25,13 +29,15 @@ func main() {
 		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
 	}
 
-	db, err := psg.InitStorage(conf)
+	pgsqlConnector, err := psg.InitStorage(conf)
 	if err != nil {
 		log.Fatal("Ошибка подключения к бд:", err)
 	}
 	log.Println("База данных запущена")
 
-	coordinate := usecase.NewUseCase(cityAPI.Location{}, weatherAPI.Weather{}, db)
+	crudRepo := repositories.NewPostgresRepository(pgsqlConnector.DB)
+	crudService := crud.NewService(crudRepo)
+	coordinate := usecase.NewUseCase(cityAPI.New(), weatherAPI.New(), crudService)
 
 	citys := []string{"Rostov-on-Don", "Moscow", "Bergen", "Amsterdam", ""}
 	for _, city := range citys {

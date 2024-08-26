@@ -1,22 +1,40 @@
 package usecase
 
 import (
-	"testTask2/internal/API"
-	"testTask2/internal/storage"
+	"github.com/DoktorGhost/mock_test/internal/entity"
+	"github.com/DoktorGhost/mock_test/internal/services/crud"
 )
 
-type useCase struct {
-	city    API.CityAPI
-	weather API.WeatherAPI
-	storage storage.Database
+//go:generate mockgen -source=$GOFILE -destination=./mock_clients.go -package=${GOPACKAGE}
+
+type CityAPI interface {
+	GetCoordinates(city string) (entity.Location, error)
 }
 
-func NewUseCase(city API.CityAPI, weather API.WeatherAPI, storage storage.Database) *useCase {
-	return &useCase{city: city, weather: weather, storage: storage}
+type WeatherAPI interface {
+	FetchWeather(loc entity.Location) (entity.WeatherInfo, error)
 }
 
-func (uc *useCase) GetAndSave(city string) error {
-	loc, err := uc.city.GetСoordinates(city)
+type UseCase struct {
+	city        CityAPI
+	weather     WeatherAPI
+	crudService *crud.Service
+}
+
+func NewUseCase(
+	city CityAPI,
+	weather WeatherAPI,
+	crudService *crud.Service,
+) *UseCase {
+	return &UseCase{
+		city:        city,
+		weather:     weather,
+		crudService: crudService,
+	}
+}
+
+func (uc *UseCase) GetAndSave(city string) error {
+	loc, err := uc.city.GetCoordinates(city)
 	if err != nil {
 		return err
 	}
@@ -24,7 +42,7 @@ func (uc *useCase) GetAndSave(city string) error {
 	if err != nil {
 		return err
 	}
-	err = uc.storage.Save(&weather)
+	err = uc.crudService.Create(&weather)
 	if err != nil {
 		return err
 	}
